@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,7 +37,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import me.algosketch.hanilkeyboard.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,8 +56,8 @@ data class KeyboardUiState(
     val focusedIndex: Int,
     val composing: Boolean,
     val converting: Boolean,
-    val enterLabel: String,
-    val showSwitchKey: Boolean,
+    /** 엔터 키 라벨. null 이면 줄바꿈 아이콘을 표시한다. */
+    val enterLabel: String?,
 )
 
 private data class KeyboardColors(
@@ -86,7 +91,6 @@ fun KeyboardView(
     state: KeyboardUiState,
     onKey: (KeyAction) -> Unit,
     onCandidate: (Int) -> Unit,
-    onSwitchImeLongPress: () -> Unit,
     bottomInsetPx: Int = 0,
 ) {
     val colors = keyboardColors()
@@ -106,15 +110,16 @@ fun KeyboardView(
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().height(52.dp)) {
                     row.forEach { key ->
-                        if (key.action == KeyAction.SwitchIme && !state.showSwitchKey) return@forEach
-                        val weight = if (key.action == KeyAction.Space && !state.showSwitchKey) key.weight + 1f else key.weight
+                        if (key.action == KeyAction.Spacer) {
+                            Spacer(Modifier.weight(key.weight))
+                            return@forEach
+                        }
                         KeyButton(
                             key = key,
                             state = state,
                             colors = colors,
-                            modifier = Modifier.weight(weight),
+                            modifier = Modifier.weight(key.weight),
                             onKey = onKey,
-                            onLongPress = if (key.action == KeyAction.SwitchIme) onSwitchImeLongPress else null,
                         )
                     }
                 }
@@ -171,16 +176,14 @@ private fun KeyButton(
     colors: KeyboardColors,
     modifier: Modifier,
     onKey: (KeyAction) -> Unit,
-    onLongPress: (() -> Unit)?,
 ) {
     val action = key.action
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val currentOnKey by rememberUpdatedState(onKey)
-    val currentOnLongPress by rememberUpdatedState(onLongPress)
     val special = action !is KeyAction.Jamo && action !is KeyAction.Text && action !is KeyAction.Reading &&
-        action != KeyAction.Space
+        action !is KeyAction.MultiTap && action != KeyAction.Space
     val highlighted = (action == KeyAction.Shift && state.shift) ||
         (action == KeyAction.Enter && state.composing)
 
@@ -218,17 +221,6 @@ private fun KeyButton(
                             tryAwaitRelease()
                             job.cancel()
                         }
-                        currentOnLongPress != null -> {
-                            var longFired = false
-                            val job = scope.launch {
-                                delay(500)
-                                longFired = true
-                                currentOnLongPress?.invoke()
-                            }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            if (released && !longFired) fire()
-                        }
                         else -> {
                             fire()
                             tryAwaitRelease()
@@ -239,10 +231,23 @@ private fun KeyButton(
             },
         contentAlignment = Alignment.Center,
     ) {
+        if (action == KeyAction.Enter && state.enterLabel == null) {
+            Icon(
+                painter = painterResource(R.drawable.ic_key_enter),
+                contentDescription = "엔터",
+                tint = colors.text,
+                modifier = Modifier.size(28.dp),
+            )
+            return@Box
+        }
         Text(
             text = labelOf(action, state),
             color = if (highlighted) colors.accent else colors.text,
-            fontSize = if (action is KeyAction.Jamo || action is KeyAction.Text || action is KeyAction.Reading) 20.sp else 14.sp,
+            fontSize = when (action) {
+                is KeyAction.Jamo, is KeyAction.Text, is KeyAction.Reading -> 20.sp
+                is KeyAction.MultiTap -> 15.sp // 여러 문자를 한 키에 표시
+                else -> 14.sp
+            },
             maxLines = 1,
         )
     }
@@ -252,16 +257,17 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     is KeyAction.Jamo -> (if (state.shift) action.shifted else action.normal).toString()
     is KeyAction.Reading -> action.char.toString()
     is KeyAction.Text -> action.text
+    is KeyAction.MultiTap -> action.options.joinToString("")
     KeyAction.Backspace -> "⌫"
     KeyAction.Space -> when {
         state.converting -> "다음 후보"
         state.composing -> "변환"
         else -> "띄어쓰기"
     }
-    KeyAction.Enter -> state.enterLabel
+    KeyAction.Enter -> state.enterLabel.orEmpty()
     KeyAction.Shift -> "⇧"
     KeyAction.SymbolMode -> "!#1"
     KeyAction.LetterMode -> "가あ"
     KeyAction.SymbolPage -> "${state.symbolPage + 1}/${KeyboardLayouts.symbolPages.size}"
-    KeyAction.SwitchIme -> "🌐"
+    KeyAction.Spacer -> ""
 }

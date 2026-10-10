@@ -1,12 +1,12 @@
 package me.algosketch.hanilkeyboard.ime
 
 import android.inputmethodservice.InputMethodService
+import android.os.SystemClock
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,8 +52,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private var symbolPage by mutableIntStateOf(0)
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
-    private var showSwitchKey by mutableStateOf(true)
     private var bottomInsetPx by mutableIntStateOf(0)
+    private val multiTap = MultiTapTracker()
 
     override fun onCreate() {
         super.onCreate()
@@ -88,13 +88,12 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                         composing = state != ImeState.Idle,
                         converting = state is ImeState.Converting,
                         enterLabel = enterLabel(state),
-                        showSwitchKey = showSwitchKey,
                     ),
                     bottomInsetPx = bottomInsetPx,
                     onKey = ::onKey,
-                    onCandidate = { dispatch(ImeEvent.SelectCandidate(it)) },
-                    onSwitchImeLongPress = {
-                        getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+                    onCandidate = {
+                        multiTap.reset()
+                        dispatch(ImeEvent.SelectCandidate(it))
                     },
                 )
             }
@@ -113,7 +112,6 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         imeState = ImeState.Idle
         shift = false
         symbolPage = 0
-        showSwitchKey = shouldOfferSwitchingToNextInputMethod()
         updateBottomInset()
         mode = when (info.inputType and InputType.TYPE_MASK_CLASS) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> KeyboardMode.SYMBOL
@@ -188,6 +186,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     // ---- 키 입력 ----
 
     private fun onKey(action: KeyAction) {
+        if (action !is KeyAction.MultiTap) multiTap.reset()
         when (action) {
             is KeyAction.Jamo -> {
                 dispatch(ImeEvent.Key(if (shift) action.shifted else action.normal))
@@ -195,6 +194,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             }
             is KeyAction.Reading -> dispatch(ImeEvent.Key(action.char))
             is KeyAction.Text -> dispatch(ImeEvent.Text(action.text))
+            is KeyAction.MultiTap -> onMultiTap(action)
             KeyAction.Backspace -> dispatch(ImeEvent.Backspace)
             KeyAction.Space -> dispatch(ImeEvent.Space)
             KeyAction.Enter -> dispatch(ImeEvent.Enter)
@@ -202,7 +202,21 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
             KeyAction.LetterMode -> mode = KeyboardMode.LETTER
             KeyAction.SymbolPage -> symbolPage = (symbolPage + 1) % KeyboardLayouts.symbolPages.size
-            KeyAction.SwitchIme -> switchToNextInputMethod(false)
+            KeyAction.Spacer -> Unit
+        }
+    }
+
+    /** 、。 처럼 연속으로 눌러 바꾸는 키. 두 번째부터는 직전에 입력한 문자를 바꾼다. */
+    private fun onMultiTap(action: KeyAction.MultiTap) {
+        when (val result = multiTap.press(action, SystemClock.uptimeMillis())) {
+            is MultiTapTracker.Result.Insert -> dispatch(ImeEvent.Text(result.text))
+            is MultiTapTracker.Result.Replace -> {
+                val ic = currentInputConnection ?: return
+                ic.beginBatchEdit()
+                ic.deleteSurroundingText(result.previous.length, 0)
+                ic.commitText(result.text, 1)
+                ic.endBatchEdit()
+            }
         }
     }
 
@@ -247,8 +261,9 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         }
     }
 
-    private fun enterLabel(state: ImeState): String {
-        if (state != ImeState.Idle) return "확정"
+    /** 엔터 키 라벨. 에디터 액션이 없으면 null(줄바꿈 아이콘). */
+    private fun enterLabel(state: ImeState): String? {
+        if (state != ImeState.Idle) return "확인"
         return when (enterAction) {
             EditorInfo.IME_ACTION_SEARCH -> "검색"
             EditorInfo.IME_ACTION_GO -> "이동"
@@ -256,7 +271,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             EditorInfo.IME_ACTION_NEXT -> "다음"
             EditorInfo.IME_ACTION_DONE -> "완료"
             EditorInfo.IME_ACTION_PREVIOUS -> "이전"
-            else -> "↵"
+            else -> null
         }
     }
 }
