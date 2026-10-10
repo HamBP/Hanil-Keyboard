@@ -4,6 +4,7 @@ import android.inputmethodservice.InputMethodService
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
     private var showSwitchKey by mutableStateOf(true)
+    private var bottomInsetPx by mutableIntStateOf(0)
 
     override fun onCreate() {
         super.onCreate()
@@ -88,6 +90,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                         enterLabel = enterLabel(state),
                         showSwitchKey = showSwitchKey,
                     ),
+                    bottomInsetPx = bottomInsetPx,
                     onKey = ::onKey,
                     onCandidate = { dispatch(ImeEvent.SelectCandidate(it)) },
                     onSwitchImeLongPress = {
@@ -111,6 +114,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         shift = false
         symbolPage = 0
         showSwitchKey = shouldOfferSwitchingToNextInputMethod()
+        updateBottomInset()
         mode = when (info.inputType and InputType.TYPE_MASK_CLASS) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> KeyboardMode.SYMBOL
             else -> KeyboardMode.LETTER
@@ -160,6 +164,25 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         ic.finishComposingText()
         ic.setSelection(adjust(selStart), adjust(selEnd))
         ic.endBatchEdit()
+    }
+
+    /**
+     * 하단 시스템 영역 높이를 키보드 아래 여백으로 쓴다.
+     * IME 창에서는 인셋이 입력 뷰까지 전달되지 않으므로 창의 루트 인셋을 직접 읽는다.
+     * 제스처 내비게이션에서는 IME 가 그리는 ⌄·⌨ 버튼 영역이 navigationBars 가 아닌
+     * tappableElement 로 보고되므로(예: 42px vs 135px) 둘 중 큰 값을 쓴다.
+     */
+    private fun updateBottomInset() {
+        val decor = window.window?.decorView ?: return
+        fun read() {
+            val insets = decor.rootWindowInsets ?: return
+            bottomInsetPx = maxOf(
+                insets.getInsets(WindowInsets.Type.navigationBars()).bottom,
+                insets.getInsets(WindowInsets.Type.tappableElement()).bottom,
+            )
+        }
+        read()
+        decor.post { read() }
     }
 
     // ---- 키 입력 ----
