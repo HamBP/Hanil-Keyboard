@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -31,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,13 +87,15 @@ fun KeyboardView(
     onKey: (KeyAction) -> Unit,
     onCandidate: (Int) -> Unit,
     onSwitchImeLongPress: () -> Unit,
+    bottomInsetPx: Int = 0,
 ) {
     val colors = keyboardColors()
+    val bottomInset = with(LocalDensity.current) { bottomInsetPx.toDp() }
     Column(
         Modifier
             .fillMaxWidth()
             .background(colors.background)
-            .navigationBarsPadding()
+            .padding(bottom = bottomInset)
     ) {
         CandidateBar(state, colors, onCandidate)
         val rows = when (state.mode) {
