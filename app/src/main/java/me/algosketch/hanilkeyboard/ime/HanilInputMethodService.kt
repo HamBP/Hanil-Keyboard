@@ -30,6 +30,7 @@ import me.algosketch.hanilkeyboard.engine.ImeState
 import me.algosketch.hanilkeyboard.engine.candidates
 import me.algosketch.hanilkeyboard.engine.displayText
 import me.algosketch.hanilkeyboard.engine.focusedIndex
+import me.algosketch.hanilkeyboard.kana.KanaPadComposer
 
 /**
  * 시스템 키보드(IME) 서비스.
@@ -48,12 +49,14 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private val engine = ImeEngine(converter::convert)
 
     private var imeState by mutableStateOf<ImeState>(ImeState.Idle)
+    private var layout by mutableStateOf(KeyboardLayoutType.HANGUL_QWERTY)
     private var mode by mutableStateOf(KeyboardMode.LETTER)
     private var symbolPage by mutableIntStateOf(0)
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
     private var bottomInsetPx by mutableIntStateOf(0)
     private val multiTap = MultiTapTracker()
+    private val kanaPad = KanaPadComposer()
 
     override fun onCreate() {
         super.onCreate()
@@ -80,6 +83,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                 val state = imeState
                 KeyboardView(
                     state = KeyboardUiState(
+                        layout = layout,
                         mode = mode,
                         symbolPage = symbolPage,
                         shift = shift,
@@ -93,6 +97,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                     onKey = ::onKey,
                     onCandidate = {
                         multiTap.reset()
+                        kanaPad.reset()
                         dispatch(ImeEvent.SelectCandidate(it))
                     },
                 )
@@ -110,6 +115,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         imeState = ImeState.Idle
+        kanaPad.reset()
+        layout = KeyboardSettings.layout(this)
         shift = false
         symbolPage = 0
         updateBottomInset()
@@ -187,6 +194,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
 
     private fun onKey(action: KeyAction) {
         if (action !is KeyAction.MultiTap) multiTap.reset()
+        if (action !is KeyAction.KanaRowKey && action !is KeyAction.KanaColumnKey) kanaPad.reset()
         when (action) {
             is KeyAction.Jamo -> {
                 dispatch(ImeEvent.Key(if (shift) action.shifted else action.normal))
@@ -195,6 +203,9 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             is KeyAction.Reading -> dispatch(ImeEvent.Key(action.char))
             is KeyAction.Text -> dispatch(ImeEvent.Text(action.text))
             is KeyAction.MultiTap -> onMultiTap(action)
+            is KeyAction.KanaRowKey -> onKanaPad(kanaPad.pressRow(action.row, action.voicing))
+            is KeyAction.KanaColumnKey -> onKanaPad(kanaPad.pressColumn(action.column))
+            KeyAction.Small -> onSmall()
             KeyAction.Backspace -> dispatch(ImeEvent.Backspace)
             KeyAction.Space -> dispatch(ImeEvent.Space)
             KeyAction.Enter -> dispatch(ImeEvent.Enter)
@@ -218,6 +229,18 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                 ic.endBatchEdit()
             }
         }
+    }
+
+    private fun onKanaPad(result: KanaPadComposer.Result) = when (result) {
+        is KanaPadComposer.Result.Insert -> result.text.forEach { dispatch(ImeEvent.Key(it)) }
+        is KanaPadComposer.Result.ReplaceLast -> dispatch(ImeEvent.ReplaceLast(result.text))
+    }
+
+    /** 小: 조합 중인 마지막 가나를 작은/큰 가나로 바꾼다. 조합 중이 아니면 무시한다. */
+    private fun onSmall() {
+        val last = (imeState as? ImeState.Composing)?.composition?.keys?.lastOrNull() ?: return
+        val toggled = KanaPadComposer.toggleSmall(last) ?: return
+        dispatch(ImeEvent.ReplaceLast(toggled.toString()))
     }
 
     /** 상태 머신에 이벤트를 전달하고 결과를 에디터에 반영한다. */

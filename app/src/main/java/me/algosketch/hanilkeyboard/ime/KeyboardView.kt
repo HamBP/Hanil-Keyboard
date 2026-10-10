@@ -51,6 +51,7 @@ import me.algosketch.hanilkeyboard.conversion.Candidate
 
 /** 키보드 화면에 필요한 모든 상태. 서비스가 만들어 전달한다. */
 data class KeyboardUiState(
+    val layout: KeyboardLayoutType,
     val mode: KeyboardMode,
     val symbolPage: Int,
     val shift: Boolean,
@@ -106,7 +107,7 @@ fun KeyboardView(
         // 후보가 있을 때만 후보 바를 표시한다 (없으면 숫자 줄이 맨 위)
         if (state.candidates.isNotEmpty()) CandidateBar(state, colors, onCandidate)
         val rows = when (state.mode) {
-            KeyboardMode.LETTER -> KeyboardLayouts.letter
+            KeyboardMode.LETTER -> KeyboardLayouts.letter(state.layout)
             KeyboardMode.SYMBOL -> KeyboardLayouts.symbolPages[state.symbolPage]
         }
         Column(Modifier.padding(horizontal = 3.dp, vertical = 4.dp)) {
@@ -184,10 +185,11 @@ private fun KeyButton(
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
-    var draggedDown by remember { mutableStateOf(false) }
+    var dragTarget by remember { mutableStateOf<KeyAction?>(null) }
     val currentOnKey by rememberUpdatedState(onKey)
     val special = action !is KeyAction.Jamo && action !is KeyAction.Text && action !is KeyAction.Reading &&
-        action !is KeyAction.MultiTap && action != KeyAction.Space
+        action !is KeyAction.MultiTap && action != KeyAction.Space &&
+        action !is KeyAction.KanaRowKey && action !is KeyAction.KanaColumnKey
     val highlighted = (action == KeyAction.Shift && state.shift) ||
         (action == KeyAction.Enter && state.composing)
 
@@ -215,27 +217,27 @@ private fun KeyButton(
                 }
             )
             .pointerInput(action) {
-                if (action is KeyAction.Jamo && action.supportsDragShift) {
-                    // 시프트 문자가 있는 키: 아래로 드래그하고 떼면 시프트 문자 입력 (드래그 판정을 위해 뗄 때 입력)
-                    val threshold = DRAG_SHIFT_THRESHOLD.toPx()
+                if (action.supportsDrag) {
+                    // 드래그 방향에 따라 다른 문자를 입력하는 키 (드래그 판정을 위해 뗄 때 입력)
+                    val threshold = DRAG_THRESHOLD.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown()
                         pressed = true
                         try {
-                            var dy = 0f
                             while (true) {
                                 val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                                dy = change.position.y - down.position.y
-                                draggedDown = action.resolveDrag(dy, threshold) != action
+                                val delta = change.position - down.position
+                                val target = action.dragTarget(delta.x, delta.y, threshold)
+                                dragTarget = target.takeIf { it != action }
                                 if (!change.pressed) {
-                                    fire(action.resolveDrag(dy, threshold))
+                                    fire(target)
                                     break
                                 }
                                 change.consume()
                             }
                         } finally {
                             pressed = false
-                            draggedDown = false
+                            dragTarget = null
                         }
                     }
                     return@pointerInput
@@ -274,29 +276,49 @@ private fun KeyButton(
             )
             return@Box
         }
+        val shown = dragTarget ?: action
         Text(
-            text = labelOf(action, if (draggedDown) state.copy(shift = true) else state),
+            text = labelOf(shown, state),
             color = if (highlighted) colors.accent else colors.text,
-            fontSize = when (action) {
-                is KeyAction.Jamo, is KeyAction.Text, is KeyAction.Reading -> 20.sp
+            fontSize = when (shown) {
+                is KeyAction.Jamo, is KeyAction.Text, is KeyAction.Reading,
+                is KeyAction.KanaRowKey, is KeyAction.KanaColumnKey -> 20.sp
                 is KeyAction.MultiTap -> 15.sp // 여러 문자를 한 키에 표시
+                KeyAction.Small -> 18.sp
                 else -> 14.sp
             },
             maxLines = 1,
         )
+        // 위로 드래그해 입력하는 숫자 힌트
+        val hint = when (action) {
+            is KeyAction.KanaRowKey -> action.digit.toString()
+            is KeyAction.Text -> action.up
+            else -> null
+        }
+        if (hint != null && dragTarget == null) {
+            Text(
+                text = hint,
+                color = colors.subText,
+                fontSize = 10.sp,
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp),
+            )
+        }
     }
 }
 
 /** 키 양옆 여백. 이웃한 두 키 사이 간격은 이 값의 두 배이고, 넓은 간격(wideGap)은 그 두 배다. */
 private val KEY_HALF_GAP = 3.dp
 
-/** 이 거리 이상 아래로 드래그하면 시프트 문자로 입력한다. */
-private val DRAG_SHIFT_THRESHOLD = 20.dp
+/** 이 거리 이상 드래그하면 드래그 방향의 문자로 입력한다 (시프트 문자·탁음·숫자). */
+private val DRAG_THRESHOLD = 20.dp
 
 private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (action) {
     is KeyAction.Jamo -> (if (state.shift) action.shifted else action.normal).toString()
     is KeyAction.Reading -> action.char.toString()
     is KeyAction.Text -> action.text
+    is KeyAction.KanaRowKey -> action.row.kana(action.voicing)
+    is KeyAction.KanaColumnKey -> action.column.alone
+    KeyAction.Small -> "小"
     is KeyAction.MultiTap -> action.options.joinToString("")
     KeyAction.Backspace -> "⌫"
     KeyAction.Space -> when {
