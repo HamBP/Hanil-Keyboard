@@ -52,7 +52,6 @@ data class KeyboardUiState(
     val composing: Boolean,
     val converting: Boolean,
     val enterLabel: String,
-    val showSwitchKey: Boolean,
 )
 
 private data class KeyboardColors(
@@ -86,7 +85,6 @@ fun KeyboardView(
     state: KeyboardUiState,
     onKey: (KeyAction) -> Unit,
     onCandidate: (Int) -> Unit,
-    onSwitchImeLongPress: () -> Unit,
     bottomInsetPx: Int = 0,
 ) {
     val colors = keyboardColors()
@@ -106,15 +104,12 @@ fun KeyboardView(
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().height(52.dp)) {
                     row.forEach { key ->
-                        if (key.action == KeyAction.SwitchIme && !state.showSwitchKey) return@forEach
-                        val weight = if (key.action == KeyAction.Space && !state.showSwitchKey) key.weight + 1f else key.weight
                         KeyButton(
                             key = key,
                             state = state,
                             colors = colors,
-                            modifier = Modifier.weight(weight),
+                            modifier = Modifier.weight(key.weight),
                             onKey = onKey,
-                            onLongPress = if (key.action == KeyAction.SwitchIme) onSwitchImeLongPress else null,
                         )
                     }
                 }
@@ -171,14 +166,12 @@ private fun KeyButton(
     colors: KeyboardColors,
     modifier: Modifier,
     onKey: (KeyAction) -> Unit,
-    onLongPress: (() -> Unit)?,
 ) {
     val action = key.action
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val currentOnKey by rememberUpdatedState(onKey)
-    val currentOnLongPress by rememberUpdatedState(onLongPress)
     val special = action !is KeyAction.Jamo && action !is KeyAction.Text && action !is KeyAction.Reading &&
         action != KeyAction.Space
     val highlighted = (action == KeyAction.Shift && state.shift) ||
@@ -218,17 +211,6 @@ private fun KeyButton(
                             tryAwaitRelease()
                             job.cancel()
                         }
-                        currentOnLongPress != null -> {
-                            var longFired = false
-                            val job = scope.launch {
-                                delay(500)
-                                longFired = true
-                                currentOnLongPress?.invoke()
-                            }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            if (released && !longFired) fire()
-                        }
                         else -> {
                             fire()
                             tryAwaitRelease()
@@ -263,5 +245,4 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     KeyAction.SymbolMode -> "!#1"
     KeyAction.LetterMode -> "가あ"
     KeyAction.SymbolPage -> "${state.symbolPage + 1}/${KeyboardLayouts.symbolPages.size}"
-    KeyAction.SwitchIme -> "🌐"
 }

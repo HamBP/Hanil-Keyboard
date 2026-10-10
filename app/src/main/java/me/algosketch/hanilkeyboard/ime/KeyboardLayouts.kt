@@ -17,7 +17,6 @@ sealed interface KeyAction {
     data object SymbolMode : KeyAction
     data object LetterMode : KeyAction
     data object SymbolPage : KeyAction
-    data object SwitchIme : KeyAction
 }
 
 data class Key(val action: KeyAction, val weight: Float = 1f)
@@ -25,7 +24,7 @@ data class Key(val action: KeyAction, val weight: Float = 1f)
 enum class KeyboardMode { LETTER, SYMBOL }
 
 /**
- * 자판 배열. 삼성 키보드 일본어(쿼티) 자판의 구성(、。ー 키, 기호 전환, 언어 전환)을 따르되
+ * 자판 배열. 삼성 키보드 일본어(쿼티) 자판의 구성(、。ー 키, 기호 전환)을 따르되
  * 글자 키는 두벌식 한글 배열을 사용한다.
  */
 object KeyboardLayouts {
@@ -37,9 +36,8 @@ object KeyboardLayouts {
 
     private fun bottomRow(modeKey: KeyAction) = listOf(
         Key(modeKey, 1.5f),
-        Key(KeyAction.SwitchIme),
         Key(KeyAction.Text("、")),
-        Key(KeyAction.Space, 4f),
+        Key(KeyAction.Space, 5f),
         Key(KeyAction.Text("。")),
         Key(KeyAction.Enter, 1.5f),
     )

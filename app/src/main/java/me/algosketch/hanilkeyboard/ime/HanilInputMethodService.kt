@@ -6,7 +6,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +51,6 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private var symbolPage by mutableIntStateOf(0)
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
-    private var showSwitchKey by mutableStateOf(true)
     private var bottomInsetPx by mutableIntStateOf(0)
 
     override fun onCreate() {
@@ -88,14 +86,10 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                         composing = state != ImeState.Idle,
                         converting = state is ImeState.Converting,
                         enterLabel = enterLabel(state),
-                        showSwitchKey = showSwitchKey,
                     ),
                     bottomInsetPx = bottomInsetPx,
                     onKey = ::onKey,
                     onCandidate = { dispatch(ImeEvent.SelectCandidate(it)) },
-                    onSwitchImeLongPress = {
-                        getSystemService(InputMethodManager::class.java).showInputMethodPicker()
-                    },
                 )
             }
         }
@@ -113,7 +107,6 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         imeState = ImeState.Idle
         shift = false
         symbolPage = 0
-        showSwitchKey = shouldOfferSwitchingToNextInputMethod()
         updateBottomInset()
         mode = when (info.inputType and InputType.TYPE_MASK_CLASS) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> KeyboardMode.SYMBOL
@@ -202,7 +195,6 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
             KeyAction.LetterMode -> mode = KeyboardMode.LETTER
             KeyAction.SymbolPage -> symbolPage = (symbolPage + 1) % KeyboardLayouts.symbolPages.size
-            KeyAction.SwitchIme -> switchToNextInputMethod(false)
         }
     }
 
