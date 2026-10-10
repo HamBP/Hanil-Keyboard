@@ -29,8 +29,8 @@ object LanguageModelRepository {
         val app = context.applicationContext
         thread(name = "dict-loader") {
             try {
-                val dict = BinaryDictionary(map(app, "dict/ja_dict.bin.gz", "ja_dict.bin"))
-                val conn = BinaryConnection(map(app, "dict/connection.bin.gz", "connection.bin"))
+                val dict = BinaryDictionary(map(app, "dict/ja_dict.bin.gzip", "ja_dict.bin"))
+                val conn = BinaryConnection(map(app, "dict/connection.bin.gzip", "connection.bin"))
                 model = LanguageModel(dict, conn)
                 onLoaded()
             } catch (e: Exception) {
