@@ -8,6 +8,15 @@
 - 한글→히라가나 매핑을 바꾸면 `docs/CONVERSION_RULES.md` 와 `HangulTest` 를 함께 수정한다.
 - 상태 머신 전이를 바꾸면 `docs/SPEC.md` §4 전이표와 `ImeEngineTest` 를 함께 수정한다.
 
+## 브랜치·PR 규칙 (필수)
+- 기본 작업 브랜치는 `develop`. `main` 에 직접 커밋하지 않는다.
+- 적당한 작업 단위(기능 하나, 규칙 변경 하나 등)마다 `develop` 에서 작업 브랜치를 만든다.
+- 브랜치 이름: `feature/{번호}-{작업내용}` (작업내용은 영어 kebab-case). 예: `feature/3-candidate-preview`
+  - 번호는 이 브랜치로 만들 GitHub PR 번호와 맞춘다 (이슈·PR 공용 번호의 다음 값: `gh pr list --state all --limit 1`, `gh issue list --state all --limit 1` 중 큰 값 + 1).
+- 작업 브랜치 안에서는 아래 커밋 규칙대로 작은 커밋을 쌓고, push 후 `develop` 대상 PR 을 `gh pr create --base develop` 으로 만든다.
+- PR 병합은 사용자가 한다. 다음 작업이 병합 전 PR 에 의존하면 그 브랜치에서 새 브랜치를 따고 PR base 를 해당 브랜치로 지정한다.
+- PR 본문: 변경 요약, 커밋 목록 성격(문서/기능 등), 테스트 결과.
+
 ## 커밋 규칙 (필수)
 - 작업 후 사용자가 요청하지 않아도 **자동으로 커밋**한다.
 - 커밋은 하나의 작업으로 분리할 수 있는 **작은 단위**로 나눈다. (예: 서버 API 엔드포인트 하나 추가 정도)
