@@ -45,8 +45,7 @@ object KeyboardLayouts {
 
     private fun bottomRow(modeKey: KeyAction) = listOf(
         Key(modeKey, 1.5f),
-        Key(PUNCTUATION),
-        Key(KeyAction.Space, 5f),
+        Key(KeyAction.Space, 6f),
         Key(KeyAction.Reading('ー')),
         Key(KeyAction.Enter, 1.5f),
     )
@@ -55,7 +54,7 @@ object KeyboardLayouts {
         textRow("1234567890"),
         jamoRow("ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ"),
         listOf(Key(KeyAction.Spacer, 0.5f)) + jamoRow("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ") + Key(KeyAction.Spacer, 0.5f),
-        listOf(Key(KeyAction.Shift, 1.5f)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") + Key(KeyAction.Backspace, 1.5f),
+        listOf(Key(KeyAction.Shift)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") + Key(PUNCTUATION) + Key(KeyAction.Backspace),
         bottomRow(KeyAction.SymbolMode),
     )
 
@@ -64,7 +63,7 @@ object KeyboardLayouts {
             textRow("1234567890"),
             textRow("！？「」『』（）・～"),
             listOf(Key(KeyAction.SymbolPage, 1.5f)) +
-                textRow("。…：；＠＃※") + Key(KeyAction.Backspace, 1.5f),
+                listOf(Key(PUNCTUATION)) + textRow("…：；＠＃※") + Key(KeyAction.Backspace, 1.5f),
             bottomRow(KeyAction.LetterMode),
         ),
         listOf(

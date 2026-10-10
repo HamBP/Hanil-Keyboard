@@ -101,7 +101,8 @@ fun KeyboardView(
             .background(colors.background)
             .padding(bottom = bottomInset)
     ) {
-        CandidateBar(state, colors, onCandidate)
+        // 후보가 있을 때만 후보 바를 표시한다 (없으면 숫자 줄이 맨 위)
+        if (state.candidates.isNotEmpty()) CandidateBar(state, colors, onCandidate)
         val rows = when (state.mode) {
             KeyboardMode.LETTER -> KeyboardLayouts.letter
             KeyboardMode.SYMBOL -> KeyboardLayouts.symbolPages[state.symbolPage]
@@ -261,7 +262,7 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     KeyAction.Backspace -> "⌫"
     KeyAction.Space -> when {
         state.converting -> "다음 후보"
-        state.composing -> "변환"
+        state.composing -> "다음"
         else -> "띄어쓰기"
     }
     KeyAction.Enter -> state.enterLabel.orEmpty()
