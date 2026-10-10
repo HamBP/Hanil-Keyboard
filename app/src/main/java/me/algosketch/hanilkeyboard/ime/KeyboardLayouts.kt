@@ -20,6 +20,9 @@ sealed interface KeyAction {
     data object SymbolMode : KeyAction
     data object LetterMode : KeyAction
     data object SymbolPage : KeyAction
+
+    /** 키가 없는 빈 공간(행 들여쓰기용). */
+    data object Spacer : KeyAction
 }
 
 data class Key(val action: KeyAction, val weight: Float = 1f)
@@ -44,14 +47,14 @@ object KeyboardLayouts {
         Key(modeKey, 1.5f),
         Key(PUNCTUATION),
         Key(KeyAction.Space, 5f),
-        Key(KeyAction.Text("。")),
+        Key(KeyAction.Reading('ー')),
         Key(KeyAction.Enter, 1.5f),
     )
 
     val letter: List<List<Key>> = listOf(
         textRow("1234567890"),
         jamoRow("ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ"),
-        jamoRow("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ") + Key(KeyAction.Reading('ー')),
+        listOf(Key(KeyAction.Spacer, 0.5f)) + jamoRow("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ") + Key(KeyAction.Spacer, 0.5f),
         listOf(Key(KeyAction.Shift, 1.5f)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") + Key(KeyAction.Backspace, 1.5f),
         bottomRow(KeyAction.SymbolMode),
     )
@@ -60,8 +63,8 @@ object KeyboardLayouts {
         listOf(
             textRow("1234567890"),
             textRow("！？「」『』（）・～"),
-            listOf(Key(KeyAction.SymbolPage, 1.5f), Key(KeyAction.Reading('ー'))) +
-                textRow("…：；＠＃※") + Key(KeyAction.Backspace, 1.5f),
+            listOf(Key(KeyAction.SymbolPage, 1.5f)) +
+                textRow("。…：；＠＃※") + Key(KeyAction.Backspace, 1.5f),
             bottomRow(KeyAction.LetterMode),
         ),
         listOf(

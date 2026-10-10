@@ -202,6 +202,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
             KeyAction.LetterMode -> mode = KeyboardMode.LETTER
             KeyAction.SymbolPage -> symbolPage = (symbolPage + 1) % KeyboardLayouts.symbolPages.size
+            KeyAction.Spacer -> Unit
         }
     }
 

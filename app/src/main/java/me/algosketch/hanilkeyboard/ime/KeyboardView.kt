@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -104,6 +105,10 @@ fun KeyboardView(
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().height(52.dp)) {
                     row.forEach { key ->
+                        if (key.action == KeyAction.Spacer) {
+                            Spacer(Modifier.weight(key.weight))
+                            return@forEach
+                        }
                         KeyButton(
                             key = key,
                             state = state,
@@ -247,4 +252,5 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     KeyAction.SymbolMode -> "!#1"
     KeyAction.LetterMode -> "가あ"
     KeyAction.SymbolPage -> "${state.symbolPage + 1}/${KeyboardLayouts.symbolPages.size}"
+    KeyAction.Spacer -> ""
 }
