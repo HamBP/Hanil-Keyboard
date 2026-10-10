@@ -116,6 +116,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         super.onStartInputView(info, restarting)
         imeState = ImeState.Idle
         kanaPad.reset()
+        layout = KeyboardSettings.layout(this)
         shift = false
         symbolPage = 0
         updateBottomInset()
