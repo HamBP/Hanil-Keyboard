@@ -2,7 +2,14 @@ package me.algosketch.hanilkeyboard.ime
 
 sealed interface KeyAction {
     /** 한글 자모. 시프트 시 [shifted] 입력. */
-    data class Jamo(val normal: Char, val shifted: Char = normal) : KeyAction
+    data class Jamo(val normal: Char, val shifted: Char = normal) : KeyAction {
+        /** 시프트 문자가 따로 있어 아래로 드래그해 입력할 수 있는 키인지. (ㅂ→ㅃ, ㅐ→ㅒ 등) */
+        val supportsDragShift: Boolean get() = shifted != normal
+
+        /** 아래로 [dy] 만큼 드래그하고 뗐을 때 입력할 키. [thresholdPx] 이상이면 시프트 문자. */
+        fun resolveDrag(dy: Float, thresholdPx: Float): Jamo =
+            if (supportsDragShift && dy >= thresholdPx) Jamo(shifted) else this
+    }
 
     /** 독음 버퍼에 들어가는 문자(장음 ー). */
     data class Reading(val char: Char) : KeyAction
