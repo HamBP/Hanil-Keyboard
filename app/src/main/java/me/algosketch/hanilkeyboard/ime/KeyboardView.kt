@@ -199,7 +199,12 @@ private fun KeyButton(
     Box(
         modifier
             .fillMaxHeight()
-            .padding(horizontal = 3.dp, vertical = 4.dp)
+            .padding(
+                start = if (key.wideGapStart) KEY_HALF_GAP * 3 else KEY_HALF_GAP,
+                end = if (key.wideGapEnd) KEY_HALF_GAP * 3 else KEY_HALF_GAP,
+                top = 4.dp,
+                bottom = 4.dp,
+            )
             .clip(RoundedCornerShape(7.dp))
             .background(
                 when {
@@ -281,6 +286,9 @@ private fun KeyButton(
         )
     }
 }
+
+/** 키 양옆 여백. 이웃한 두 키 사이 간격은 이 값의 두 배이고, 넓은 간격(wideGap)은 그 두 배다. */
+private val KEY_HALF_GAP = 3.dp
 
 /** 이 거리 이상 아래로 드래그하면 시프트 문자로 입력한다. */
 private val DRAG_SHIFT_THRESHOLD = 20.dp

@@ -32,7 +32,16 @@ sealed interface KeyAction {
     data object Spacer : KeyAction
 }
 
-data class Key(val action: KeyAction, val weight: Float = 1f)
+/**
+ * 자판의 키 하나. [weight] 는 한 줄(10칸) 안에서의 가로 칸 수.
+ * [wideGapStart]/[wideGapEnd] 이면 그쪽 옆 키와의 간격을 기본의 두 배로 한다(키 자신의 폭에서 줄인다).
+ */
+data class Key(
+    val action: KeyAction,
+    val weight: Float = 1f,
+    val wideGapStart: Boolean = false,
+    val wideGapEnd: Boolean = false,
+)
 
 enum class KeyboardMode { LETTER, SYMBOL }
 
@@ -62,7 +71,9 @@ object KeyboardLayouts {
         textRow("1234567890"),
         jamoRow("ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ"),
         listOf(Key(KeyAction.Spacer, 0.5f)) + jamoRow("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ") + Key(KeyAction.Spacer, 0.5f),
-        listOf(Key(KeyAction.Shift)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") + Key(KeyAction.Backspace, 2f),
+        // ㅋ 은 ㄴ 의 시작, ㅡ 는 ㅏ 의 끝에 맞춘다 (⇧·⌫ 1.5칸, 옆 키와 간격 두 배)
+        listOf(Key(KeyAction.Shift, 1.5f, wideGapEnd = true)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") +
+            Key(KeyAction.Backspace, 1.5f, wideGapStart = true),
         bottomRow(KeyAction.SymbolMode),
     )
 
