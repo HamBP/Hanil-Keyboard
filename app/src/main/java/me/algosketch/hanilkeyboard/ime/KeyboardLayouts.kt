@@ -45,6 +45,7 @@ object KeyboardLayouts {
     )
 
     val letter: List<List<Key>> = listOf(
+        textRow("1234567890"),
         jamoRow("ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ"),
         jamoRow("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ") + Key(KeyAction.Reading('ー')),
         listOf(Key(KeyAction.Shift, 1.5f)) + jamoRow("ㅋㅌㅊㅍㅠㅜㅡ") + Key(KeyAction.Backspace, 1.5f),
