@@ -262,7 +262,7 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     KeyAction.Backspace -> "⌫"
     KeyAction.Space -> when {
         state.converting -> "다음 후보"
-        state.composing -> "변환"
+        state.composing -> "다음"
         else -> "띄어쓰기"
     }
     KeyAction.Enter -> state.enterLabel.orEmpty()
