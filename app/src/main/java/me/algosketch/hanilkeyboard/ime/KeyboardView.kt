@@ -37,7 +37,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import me.algosketch.hanilkeyboard.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,7 +56,8 @@ data class KeyboardUiState(
     val focusedIndex: Int,
     val composing: Boolean,
     val converting: Boolean,
-    val enterLabel: String,
+    /** 엔터 키 라벨. null 이면 줄바꿈 아이콘을 표시한다. */
+    val enterLabel: String?,
 )
 
 private data class KeyboardColors(
@@ -226,6 +231,15 @@ private fun KeyButton(
             },
         contentAlignment = Alignment.Center,
     ) {
+        if (action == KeyAction.Enter && state.enterLabel == null) {
+            Icon(
+                painter = painterResource(R.drawable.ic_key_enter),
+                contentDescription = "엔터",
+                tint = colors.text,
+                modifier = Modifier.size(28.dp),
+            )
+            return@Box
+        }
         Text(
             text = labelOf(action, state),
             color = if (highlighted) colors.accent else colors.text,
@@ -247,7 +261,7 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
         state.composing -> "변환"
         else -> "띄어쓰기"
     }
-    KeyAction.Enter -> state.enterLabel
+    KeyAction.Enter -> state.enterLabel.orEmpty()
     KeyAction.Shift -> "⇧"
     KeyAction.SymbolMode -> "!#1"
     KeyAction.LetterMode -> "가あ"

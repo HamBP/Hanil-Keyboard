@@ -261,7 +261,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         }
     }
 
-    private fun enterLabel(state: ImeState): String {
+    /** 엔터 키 라벨. 에디터 액션이 없으면 null(줄바꿈 아이콘). */
+    private fun enterLabel(state: ImeState): String? {
         if (state != ImeState.Idle) return "확인"
         return when (enterAction) {
             EditorInfo.IME_ACTION_SEARCH -> "검색"
@@ -270,7 +271,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             EditorInfo.IME_ACTION_NEXT -> "다음"
             EditorInfo.IME_ACTION_DONE -> "완료"
             EditorInfo.IME_ACTION_PREVIOUS -> "이전"
-            else -> "↵"
+            else -> null
         }
     }
 }
