@@ -33,6 +33,6 @@
 - 사용자 IDE 설정 파일(`.idea/` 등)은 사용자가 요청하지 않는 한 커밋하지 않는다.
 
 ## 개발
-- 단위 테스트: `./gradlew :app:testDebugUnitTest` (로직 패키지 `hangul`, `conversion`, `engine` 은 순수 Kotlin 으로 유지)
+- 단위 테스트: `./gradlew :app:testDebugUnitTest` (로직 패키지 `hangul`, `kana`, `conversion`, `engine` 은 순수 Kotlin 으로 유지)
 - 사전 재생성: `python tools/dictgen/build_dictionary.py` (Mozc 사전 다운로드 → `app/src/main/assets/dict/*.gzip`)
 - 입력 문자열은 기기 내부에서만 처리한다. 네트워크 권한·외부 전송·입력 내용 저장을 추가하지 않는다.
