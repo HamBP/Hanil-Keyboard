@@ -140,7 +140,8 @@ ImeEngine 내부 파생 파이프라인 (Composition):
 - 독음 키는 `ぢ→じ`, `づ→ず` 정규화. 독음당 표기 최대 60개(비용순).
 - 조사·조동사는 기능어 플래그.
 - 연접 비용 행렬(2672×2672)은 64 단위로 양자화하여 1바이트로 저장.
-- 결과물(gzip): `assets/dict/ja_dict.bin.gz`(≈6.6MB), `assets/dict/connection.bin.gz`(≈1.2MB). 저장소에 커밋한다.
+- 결과물(gzip): `assets/dict/ja_dict.bin.gzip`(≈6.6MB), `assets/dict/connection.bin.gzip`(≈1.2MB). 저장소에 커밋한다.
+  - 확장자를 `.gz` 로 하면 Android 빌드가 APK 패키징 시 압축을 풀고 확장자를 제거하므로 `.gzip` 을 쓴다.
 
 ### 5.3 사전 포맷
 - `ja_dict.bin` (빅엔디언): `"HKD2"`, nReadings, nEntries, readingCharsLen, surfaceCharsLen, maxReadingLen / readingOff[], entryStart[], surfaceOff[] (int) / cost[], lid[], rid[] (short) / flags[] (byte) / readingChars, surfaceChars (UTF-16). 독음 정렬 → 이진 탐색.
@@ -183,6 +184,7 @@ ImeEngine 내부 파생 파이프라인 (Composition):
 | 2026-10-10 | `워` → を, 조사 は/へ 는 표기대로(하/헤) 입력 | を 입력 수단 확보, 발음 기반 매핑 일관성 |
 | 2026-10-10 | 사전 비용 임계값 7000 | APK 크기(사전 ≈7.8MB)와 어휘 범위의 절충 |
 | 2026-10-10 | UI 는 Jetpack Compose, 키는 누르는 순간 입력 | 프로젝트 기본 스택, 빠른 연타 대응 |
+| 2026-10-10 | 사전 에셋 확장자를 `.gz` → `.gzip` 으로 변경 | `.gz` 에셋은 APK 에서 압축 해제·확장자 제거되어 런타임 로드 실패 (기기에서 한자 후보 미표시) |
 | 2026-10-10 | 커밋 메시지는 한국어, `.idea/` 등 IDE 설정은 커밋하지 않음 | 기존 커밋 메시지(한국어)와 일관성, 개인 환경 파일 분리 |
 | 2026-10-10 | 기능과 함께 바뀌는 테스트는 기능 커밋에 포함, 문서 갱신은 별도 커밋 | 테스트는 기능의 일부, 문서는 변경 종류가 다름 |
 
