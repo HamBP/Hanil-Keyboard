@@ -243,8 +243,11 @@ private fun KeyButton(
         Text(
             text = labelOf(action, state),
             color = if (highlighted) colors.accent else colors.text,
-            fontSize = if (action is KeyAction.Jamo || action is KeyAction.Text || action is KeyAction.Reading ||
-                action is KeyAction.MultiTap) 20.sp else 14.sp,
+            fontSize = when (action) {
+                is KeyAction.Jamo, is KeyAction.Text, is KeyAction.Reading -> 20.sp
+                is KeyAction.MultiTap -> 15.sp // 여러 문자를 한 키에 표시
+                else -> 14.sp
+            },
             maxLines = 1,
         )
     }
