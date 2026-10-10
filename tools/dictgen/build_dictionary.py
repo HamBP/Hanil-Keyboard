@@ -5,8 +5,10 @@ Mozc OSS 사전(dictionary_oss)으로부터 앱 내장 가나→한자 변환 �
   python tools/dictgen/build_dictionary.py [--mozc-dir DIR] [--max-cost 7000]
 
 --mozc-dir 를 생략하면 GitHub(google/mozc)에서 사전 파일을 내려받아 tools/dictgen/.cache 에 저장한다.
-출력: app/src/main/assets/dict/ja_dict.bin.gz, app/src/main/assets/dict/connection.bin.gz,
+출력: app/src/main/assets/dict/ja_dict.bin.gzip, app/src/main/assets/dict/connection.bin.gzip,
       app/src/main/assets/licenses/mozc.txt
+
+※ 확장자를 .gz 로 하면 Android 빌드가 APK 패키징 시 압축을 풀고 확장자를 제거하므로 .gzip 을 쓴다.
 
 바이너리 포맷(빅엔디언, gzip 압축)은 docs/SPEC.md 의 "사전 포맷" 절과
 app/src/main/java/.../conversion/BinaryDictionary.kt 를 참고.
@@ -121,7 +123,7 @@ def main():
     out += b"".join(reading_chars)
     out += b"".join(surface_chars)
 
-    dst = os.path.join(ROOT, "app", "src", "main", "assets", "dict", "ja_dict.bin.gz")
+    dst = os.path.join(ROOT, "app", "src", "main", "assets", "dict", "ja_dict.bin.gzip")
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     with gzip.GzipFile(dst, "wb", compresslevel=9, mtime=0) as g:
         g.write(out)
@@ -132,7 +134,7 @@ def main():
     n = int(values[0])
     matrix = bytes(min(255, (int(x) + CONNECTION_STEP // 2) // CONNECTION_STEP) for x in values[1:])
     assert len(matrix) == n * n
-    conn_dst = os.path.join(ROOT, "app", "src", "main", "assets", "dict", "connection.bin.gz")
+    conn_dst = os.path.join(ROOT, "app", "src", "main", "assets", "dict", "connection.bin.gzip")
     with gzip.GzipFile(conn_dst, "wb", compresslevel=9, mtime=0) as g:
         g.write(CONNECTION_MAGIC + struct.pack(">2i", n, CONNECTION_STEP) + matrix)
 

@@ -12,10 +12,10 @@ class KanaKanjiConverterTest {
 
     companion object {
         val dictionary: BinaryDictionary by lazy {
-            File("src/main/assets/dict/ja_dict.bin.gz").inputStream().use { BinaryDictionary.load(it) }
+            File("src/main/assets/dict/ja_dict.bin.gzip").inputStream().use { BinaryDictionary.load(it) }
         }
         val model: LanguageModel by lazy {
-            val connection = File("src/main/assets/dict/connection.bin.gz").inputStream().use { BinaryConnection.load(it) }
+            val connection = File("src/main/assets/dict/connection.bin.gzip").inputStream().use { BinaryConnection.load(it) }
             LanguageModel(dictionary, connection)
         }
     }

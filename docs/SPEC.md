@@ -21,7 +21,8 @@
 | R7 | 입력한 문자열은 앱 내에서만 처리하고 서버로 전송하지 않는다. | INTERNET 권한 제거(`tools:node="remove"`), 저장·로그 없음 |
 | R8 | 한글 → 히라가나 → 한자 변환 상태 머신 설계에 특히 신경 쓴다. | `engine/ImeEngine.kt` (§4) |
 | R9 | 요청 내용을 기능·세부 구현사항으로 정리한 md 파일과 변환 규칙 md 파일을 관리하고, 결정사항이 생길 때마다 갱신한다. | `docs/SPEC.md`, `docs/CONVERSION_RULES.md`, `CLAUDE.md` |
-| R10 | 작업은 자동으로 커밋한다. 커밋은 하나의 작업으로 분리할 수 있는 작은 단위(예: API 엔드포인트 하나 추가 정도)로 나눈다. 문서 수정·스타일·리팩토링·기능 수정·기능 추가는 서로 다른 커밋으로 분리한다. 프롬프트는 전용 md 로 관리한다. | `CLAUDE.md`(커밋 규칙), `docs/PROMPTS.md` |
+| R10 | 작업은 자동으로 커밋한다. 커밋은 하나의 작업으로 분리할 수 있는 작은 단위(예: API 엔드포인트 하나 추가 정도)로 나눈다. 문서 수정·스타일·리팩토링·기능 수정·기능 추가는 서로 다른 커밋으로 분리한다. 프롬프트는 전용 md 로 관리한다. |
+| R11 | 작업 단위마다 브랜치와 PR 을 만든다. 기본 작업 브랜치는 `develop`, 작업 브랜치는 `feature/{번호}-{작업내용}`. | `CLAUDE.md`(브랜치·PR 규칙) | `CLAUDE.md`(커밋 규칙), `docs/PROMPTS.md` |
 
 ---
 
@@ -141,7 +142,8 @@ ImeEngine 내부 파생 파이프라인 (Composition):
 - 독음 키는 `ぢ→じ`, `づ→ず` 정규화. 독음당 표기 최대 60개(비용순).
 - 조사·조동사는 기능어 플래그.
 - 연접 비용 행렬(2672×2672)은 64 단위로 양자화하여 1바이트로 저장.
-- 결과물(gzip): `assets/dict/ja_dict.bin.gz`(≈6.6MB), `assets/dict/connection.bin.gz`(≈1.2MB). 저장소에 커밋한다.
+- 결과물(gzip): `assets/dict/ja_dict.bin.gzip`(≈6.6MB), `assets/dict/connection.bin.gzip`(≈1.2MB). 저장소에 커밋한다.
+  - 확장자를 `.gz` 로 하면 Android 빌드가 APK 패키징 시 압축을 풀고 확장자를 제거하므로 `.gzip` 을 쓴다.
 
 ### 5.3 사전 포맷
 - `ja_dict.bin` (빅엔디언): `"HKD2"`, nReadings, nEntries, readingCharsLen, surfaceCharsLen, maxReadingLen / readingOff[], entryStart[], surfaceOff[] (int) / cost[], lid[], rid[] (short) / flags[] (byte) / readingChars, surfaceChars (UTF-16). 독음 정렬 → 이진 탐색.
@@ -184,9 +186,11 @@ ImeEngine 내부 파생 파이프라인 (Composition):
 | 2026-10-10 | `워` → を, 조사 は/へ 는 표기대로(하/헤) 입력 | を 입력 수단 확보, 발음 기반 매핑 일관성 |
 | 2026-10-10 | 사전 비용 임계값 7000 | APK 크기(사전 ≈7.8MB)와 어휘 범위의 절충 |
 | 2026-10-10 | UI 는 Jetpack Compose, 키는 누르는 순간 입력 | 프로젝트 기본 스택, 빠른 연타 대응 |
+| 2026-10-10 | 사전 에셋 확장자를 `.gz` → `.gzip` 으로 변경 | `.gz` 에셋은 APK 에서 압축 해제·확장자 제거되어 런타임 로드 실패 (기기에서 한자 후보 미표시) |
 | 2026-10-10 | 하단 여백 = 창 루트 인셋의 max(navigationBars, tappableElement) | IME 창 인셋이 입력 뷰로 전달되지 않음. 제스처 모드에서 ⌄·⌨ 버튼은 tappableElement 로만 보고됨 (SM-S916N: 42px vs 135px) |
 | 2026-10-10 | 커밋 메시지는 한국어, `.idea/` 등 IDE 설정은 커밋하지 않음 | 기존 커밋 메시지(한국어)와 일관성, 개인 환경 파일 분리 |
 | 2026-10-10 | 기능과 함께 바뀌는 테스트는 기능 커밋에 포함, 문서 갱신은 별도 커밋 | 테스트는 기능의 일부, 문서는 변경 종류가 다름 |
+| 2026-10-10 | 브랜치 번호 = 해당 PR 번호, 작업내용은 영어 kebab-case, PR 병합은 사용자가 수행 | 브랜치와 PR 추적 용이, 리뷰 후 병합 |
 
 ---
 
