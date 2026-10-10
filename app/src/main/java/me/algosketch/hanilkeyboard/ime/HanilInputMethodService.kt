@@ -262,7 +262,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     }
 
     private fun enterLabel(state: ImeState): String {
-        if (state != ImeState.Idle) return "확정"
+        if (state != ImeState.Idle) return "확인"
         return when (enterAction) {
             EditorInfo.IME_ACTION_SEARCH -> "검색"
             EditorInfo.IME_ACTION_GO -> "이동"
