@@ -173,7 +173,7 @@ private fun KeyButton(
     var pressed by remember { mutableStateOf(false) }
     val currentOnKey by rememberUpdatedState(onKey)
     val special = action !is KeyAction.Jamo && action !is KeyAction.Text && action !is KeyAction.Reading &&
-        action != KeyAction.Space
+        action !is KeyAction.MultiTap && action != KeyAction.Space
     val highlighted = (action == KeyAction.Shift && state.shift) ||
         (action == KeyAction.Enter && state.composing)
 
@@ -224,7 +224,8 @@ private fun KeyButton(
         Text(
             text = labelOf(action, state),
             color = if (highlighted) colors.accent else colors.text,
-            fontSize = if (action is KeyAction.Jamo || action is KeyAction.Text || action is KeyAction.Reading) 20.sp else 14.sp,
+            fontSize = if (action is KeyAction.Jamo || action is KeyAction.Text || action is KeyAction.Reading ||
+                action is KeyAction.MultiTap) 20.sp else 14.sp,
             maxLines = 1,
         )
     }
@@ -234,6 +235,7 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
     is KeyAction.Jamo -> (if (state.shift) action.shifted else action.normal).toString()
     is KeyAction.Reading -> action.char.toString()
     is KeyAction.Text -> action.text
+    is KeyAction.MultiTap -> action.options.joinToString("")
     KeyAction.Backspace -> "⌫"
     KeyAction.Space -> when {
         state.converting -> "다음 후보"

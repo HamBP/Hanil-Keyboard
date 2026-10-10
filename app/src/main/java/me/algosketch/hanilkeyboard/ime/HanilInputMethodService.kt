@@ -1,6 +1,7 @@
 package me.algosketch.hanilkeyboard.ime
 
 import android.inputmethodservice.InputMethodService
+import android.os.SystemClock
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -52,6 +53,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
     private var bottomInsetPx by mutableIntStateOf(0)
+    private val multiTap = MultiTapTracker()
 
     override fun onCreate() {
         super.onCreate()
@@ -89,7 +91,10 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                     ),
                     bottomInsetPx = bottomInsetPx,
                     onKey = ::onKey,
-                    onCandidate = { dispatch(ImeEvent.SelectCandidate(it)) },
+                    onCandidate = {
+                        multiTap.reset()
+                        dispatch(ImeEvent.SelectCandidate(it))
+                    },
                 )
             }
         }
@@ -181,6 +186,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     // ---- 키 입력 ----
 
     private fun onKey(action: KeyAction) {
+        if (action !is KeyAction.MultiTap) multiTap.reset()
         when (action) {
             is KeyAction.Jamo -> {
                 dispatch(ImeEvent.Key(if (shift) action.shifted else action.normal))
@@ -188,6 +194,7 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             }
             is KeyAction.Reading -> dispatch(ImeEvent.Key(action.char))
             is KeyAction.Text -> dispatch(ImeEvent.Text(action.text))
+            is KeyAction.MultiTap -> onMultiTap(action)
             KeyAction.Backspace -> dispatch(ImeEvent.Backspace)
             KeyAction.Space -> dispatch(ImeEvent.Space)
             KeyAction.Enter -> dispatch(ImeEvent.Enter)
@@ -195,6 +202,20 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
             KeyAction.LetterMode -> mode = KeyboardMode.LETTER
             KeyAction.SymbolPage -> symbolPage = (symbolPage + 1) % KeyboardLayouts.symbolPages.size
+        }
+    }
+
+    /** 、。 처럼 연속으로 눌러 바꾸는 키. 두 번째부터는 직전에 입력한 문자를 바꾼다. */
+    private fun onMultiTap(action: KeyAction.MultiTap) {
+        when (val result = multiTap.press(action, SystemClock.uptimeMillis())) {
+            is MultiTapTracker.Result.Insert -> dispatch(ImeEvent.Text(result.text))
+            is MultiTapTracker.Result.Replace -> {
+                val ic = currentInputConnection ?: return
+                ic.beginBatchEdit()
+                ic.deleteSurroundingText(result.previous.length, 0)
+                ic.commitText(result.text, 1)
+                ic.endBatchEdit()
+            }
         }
     }
 

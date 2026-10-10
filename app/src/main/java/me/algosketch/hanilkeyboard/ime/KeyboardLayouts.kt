@@ -10,6 +10,9 @@ sealed interface KeyAction {
     /** 바로 입력되는 문자(구두점·기호·숫자). */
     data class Text(val text: String) : KeyAction
 
+    /** 연속으로 눌러 [options] 를 차례로 바꾸는 키 (예: 、→。). */
+    data class MultiTap(val options: List<String>) : KeyAction
+
     data object Backspace : KeyAction
     data object Space : KeyAction
     data object Enter : KeyAction
@@ -29,6 +32,9 @@ enum class KeyboardMode { LETTER, SYMBOL }
  */
 object KeyboardLayouts {
 
+    /** 쉼표·마침표 키: 한 번 누르면 、, 이어서 한 번 더 누르면 。 */
+    val PUNCTUATION = KeyAction.MultiTap(listOf("、", "。"))
+
     private fun jamoRow(normal: String, shifted: String = normal) =
         normal.indices.map { Key(KeyAction.Jamo(normal[it], shifted[it])) }
 
@@ -36,7 +42,7 @@ object KeyboardLayouts {
 
     private fun bottomRow(modeKey: KeyAction) = listOf(
         Key(modeKey, 1.5f),
-        Key(KeyAction.Text("、")),
+        Key(PUNCTUATION),
         Key(KeyAction.Space, 5f),
         Key(KeyAction.Text("。")),
         Key(KeyAction.Enter, 1.5f),
