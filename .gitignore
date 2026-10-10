@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+.idea/
+# 사전 생성 스크립트 다운로드 캐시
+tools/dictgen/.cache/
