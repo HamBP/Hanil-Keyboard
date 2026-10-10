@@ -97,6 +97,7 @@ fun KeyboardView(
     bottomInsetPx: Int = 0,
 ) {
     val colors = keyboardColors()
+    val heldKeys = remember { HeldKeys() }
     val bottomInset = with(LocalDensity.current) { bottomInsetPx.toDp() }
     Column(
         Modifier
@@ -122,6 +123,7 @@ fun KeyboardView(
                             key = key,
                             state = state,
                             colors = colors,
+                            heldKeys = heldKeys,
                             modifier = Modifier.weight(key.weight),
                             onKey = onKey,
                         )
@@ -178,6 +180,7 @@ private fun KeyButton(
     key: Key,
     state: KeyboardUiState,
     colors: KeyboardColors,
+    heldKeys: HeldKeys,
     modifier: Modifier,
     onKey: (KeyAction) -> Unit,
 ) {
@@ -218,24 +221,30 @@ private fun KeyButton(
             )
             .pointerInput(action) {
                 if (action.supportsDrag) {
-                    // 드래그 방향에 따라 다른 문자를 입력하는 키 (드래그 판정을 위해 뗄 때 입력)
+                    // 드래그 방향에 따라 다른 문자를 입력하는 키 (드래그 판정을 위해 뗄 때 입력).
+                    // 누른 채로 다른 키가 눌리면 그 전에 현재 방향의 문자로 입력해 순서를 지킨다.
                     val threshold = DRAG_THRESHOLD.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown()
                         pressed = true
+                        var target: KeyAction = action
+                        val held = heldKeys.hold { fire(target) }
                         try {
                             while (true) {
                                 val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                                val delta = change.position - down.position
-                                val target = action.dragTarget(delta.x, delta.y, threshold)
-                                dragTarget = target.takeIf { it != action }
+                                if (!held.committed) {
+                                    val delta = change.position - down.position
+                                    target = action.dragTarget(delta.x, delta.y, threshold)
+                                }
+                                dragTarget = target.takeIf { it != action && !held.committed }
                                 if (!change.pressed) {
-                                    fire(target)
+                                    held.commit()
                                     break
                                 }
                                 change.consume()
                             }
                         } finally {
+                            held.cancel()
                             pressed = false
                             dragTarget = null
                         }
@@ -244,6 +253,7 @@ private fun KeyButton(
                 }
                 detectTapGestures(onPress = {
                     pressed = true
+                    heldKeys.flush() // 아직 떼지 않은 드래그 키를 먼저 입력
                     when {
                         action == KeyAction.Backspace -> {
                             // 길게 누르면 반복 삭제
