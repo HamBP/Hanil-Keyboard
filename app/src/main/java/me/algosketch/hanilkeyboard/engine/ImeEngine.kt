@@ -54,6 +54,12 @@ sealed interface ImeEvent {
     /** 버퍼에 들어가는 입력: 한글 자모 또는 독음의 일부가 되는 문자(장음 ー). */
     data class Key(val char: Char) : ImeEvent
 
+    /**
+     * 버퍼의 마지막 키를 [text] 의 문자들로 바꾼다 (가나 자판의 단 변경 か→き, 小 키 つ→っ).
+     * 조합 중이 아니면 [text] 를 새로 입력하는 것과 같다.
+     */
+    data class ReplaceLast(val text: String) : ImeEvent
+
     /** 버퍼에 들어가지 않고 바로 입력되는 문자(구두점·기호·숫자). 조합 중이면 먼저 확정한다. */
     data class Text(val text: String) : ImeEvent
 
@@ -131,6 +137,7 @@ class ImeEngine(
 
     private fun idle(event: ImeEvent): Transition = when (event) {
         is ImeEvent.Key -> Transition(stateOf(listOf(event.char)))
+        is ImeEvent.ReplaceLast -> Transition(stateOf(event.text.toList()))
         is ImeEvent.Text -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(event.text)))
         ImeEvent.Backspace -> Transition(ImeState.Idle, listOf(ImeEffect.DeleteBackward))
         ImeEvent.Space -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(" ")))
@@ -142,6 +149,7 @@ class ImeEngine(
         val comp = state.composition
         return when (event) {
             is ImeEvent.Key -> Transition(stateOf(comp.keys + event.char))
+            is ImeEvent.ReplaceLast -> Transition(stateOf(comp.keys.dropLast(1) + event.text.toList()))
             is ImeEvent.Text -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(comp.commitAllText(0) + event.text)))
             ImeEvent.Backspace -> Transition(stateOf(comp.keys.dropLast(1)))
             ImeEvent.Space ->
@@ -158,13 +166,9 @@ class ImeEngine(
         val comp = state.composition
         val focus = state.focus
         return when (event) {
-            is ImeEvent.Key -> {
-                // 포커스 후보를 확정하고, 남은 입력 뒤에 새 키를 이어서 조합한다.
-                Transition(
-                    stateOf(comp.remainingKeys(focus) + event.char),
-                    listOf(ImeEffect.Commit(comp.candidates[focus].text)),
-                )
-            }
+            // 포커스 후보를 확정하고, 남은 입력 뒤에 새 키를 이어서 조합한다.
+            is ImeEvent.Key -> continueAfter(comp, focus, listOf(event.char))
+            is ImeEvent.ReplaceLast -> continueAfter(comp, focus, event.text.toList())
             is ImeEvent.Text -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(comp.commitAllText(focus) + event.text)))
             ImeEvent.Backspace -> Transition(ImeState.Composing(comp))
             ImeEvent.Space -> Transition(ImeState.Converting(comp, (focus + 1) % comp.candidates.size))
@@ -174,6 +178,11 @@ class ImeEngine(
             ImeEvent.Reset -> Transition(ImeState.Idle)
         }
     }
+
+    private fun continueAfter(comp: Composition, focus: Int, keys: List<Char>) = Transition(
+        stateOf(comp.remainingKeys(focus) + keys),
+        listOf(ImeEffect.Commit(comp.candidates[focus].text)),
+    )
 
     /** 후보 확정. 부분 후보이면 남은 입력으로 다시 조합 상태가 된다. */
     private fun commitCandidate(comp: Composition, index: Int): Transition {

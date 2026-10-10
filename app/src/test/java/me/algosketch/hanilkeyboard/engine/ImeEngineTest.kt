@@ -130,6 +130,29 @@ class ImeEngineTest {
         assertEquals(ImeEffect.EditorEnter, effects.last())
     }
 
+    @Test fun replaceLastEditsBufferEnd() {
+        "がっこ".forEach { send(ImeEvent.Key(it)) }
+        send(ImeEvent.Key('か'))
+        send(ImeEvent.ReplaceLast("う"))
+        assertEquals("がっこう", state.displayText)
+        assertTrue(state.candidates.any { it.text == "学校" })
+        send(ImeEvent.ReplaceLast("きゃ"))
+        assertEquals("がっこきゃ", state.displayText)
+    }
+
+    @Test fun replaceLastWhenIdleInserts() {
+        send(ImeEvent.ReplaceLast("き"))
+        assertEquals("き", state.displayText)
+    }
+
+    @Test fun replaceLastWhileConvertingCommitsFocusedFirst() {
+        type("각코우")
+        send(ImeEvent.Space)
+        send(ImeEvent.ReplaceLast("き"))
+        assertEquals("学校", committed.toString())
+        assertEquals("き", state.displayText)
+    }
+
     @Test fun flushCommitsFocusedAndRest() {
         type("각코우잣시")
         val index = state.candidates.indexOfFirst { it.text == "学校" }
