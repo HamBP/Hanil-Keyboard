@@ -14,8 +14,10 @@
 - 브랜치 이름: `feature/{번호}-{작업내용}` (작업내용은 영어 kebab-case). 예: `feature/3-candidate-preview`
   - 번호는 이 브랜치로 만들 GitHub PR 번호와 맞춘다 (이슈·PR 공용 번호의 다음 값: `gh pr list --state all --limit 1`, `gh issue list --state all --limit 1` 중 큰 값 + 1).
 - 작업 브랜치 안에서는 아래 커밋 규칙대로 작은 커밋을 쌓고, push 후 `develop` 대상 PR 을 `gh pr create --base develop` 으로 만든다.
-- PR 은 만든 뒤 **직접 병합**한다: `gh pr merge {번호} --merge --delete-branch` (작은 커밋 이력 보존을 위해 merge commit 방식).
-  - 병합 전 단위 테스트 통과를 확인한다. 충돌이 나면 `develop` 을 작업 브랜치에 병합해 해결한 뒤 병합한다.
+- PR 을 만든 뒤 **병합 전에 사용자에게 "머지할까요?" 라고 묻고**, 승인을 받으면 병합한다: `gh pr merge {번호} --merge --delete-branch` (작은 커밋 이력 보존을 위해 merge commit 방식).
+  - 승인은 해당 PR 에만 적용된다. PR 마다 다시 묻는다.
+  - 묻기 전에 단위 테스트 통과를 확인한다. 충돌이 나면 `develop` 을 작업 브랜치에 병합해 해결한 뒤 묻는다.
+  - 다음 작업이 병합 전 PR 에 의존하면 그 브랜치에서 새 브랜치를 따고 PR base 를 해당 브랜치로 지정한다.
   - 병합 후 로컬 `develop` 을 최신으로 맞추고 다음 브랜치를 만든다.
 - PR 본문: 변경 요약, 커밋 목록 성격(문서/기능 등), 테스트 결과.
 
