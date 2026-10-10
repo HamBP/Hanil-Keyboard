@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Hanil Keyboard</string>
+    <string name="ime_name">한일 키보드</string>
+    <string name="subtype_ja">일본어 (한글 입력)</string>
 </resources>
