@@ -3,6 +3,8 @@ package me.algosketch.hanilkeyboard.ime
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -182,15 +184,16 @@ private fun KeyButton(
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
+    var draggedDown by remember { mutableStateOf(false) }
     val currentOnKey by rememberUpdatedState(onKey)
     val special = action !is KeyAction.Jamo && action !is KeyAction.Text && action !is KeyAction.Reading &&
         action !is KeyAction.MultiTap && action != KeyAction.Space
     val highlighted = (action == KeyAction.Shift && state.shift) ||
         (action == KeyAction.Enter && state.composing)
 
-    fun fire() {
+    fun fire(target: KeyAction = action) {
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        currentOnKey(action)
+        currentOnKey(target)
     }
 
     Box(
@@ -207,6 +210,31 @@ private fun KeyButton(
                 }
             )
             .pointerInput(action) {
+                if (action is KeyAction.Jamo && action.supportsDragShift) {
+                    // 시프트 문자가 있는 키: 아래로 드래그하고 떼면 시프트 문자 입력 (드래그 판정을 위해 뗄 때 입력)
+                    val threshold = DRAG_SHIFT_THRESHOLD.toPx()
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        pressed = true
+                        try {
+                            var dy = 0f
+                            while (true) {
+                                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                dy = change.position.y - down.position.y
+                                draggedDown = action.resolveDrag(dy, threshold) != action
+                                if (!change.pressed) {
+                                    fire(action.resolveDrag(dy, threshold))
+                                    break
+                                }
+                                change.consume()
+                            }
+                        } finally {
+                            pressed = false
+                            draggedDown = false
+                        }
+                    }
+                    return@pointerInput
+                }
                 detectTapGestures(onPress = {
                     pressed = true
                     when {
@@ -242,7 +270,7 @@ private fun KeyButton(
             return@Box
         }
         Text(
-            text = labelOf(action, state),
+            text = labelOf(action, if (draggedDown) state.copy(shift = true) else state),
             color = if (highlighted) colors.accent else colors.text,
             fontSize = when (action) {
                 is KeyAction.Jamo, is KeyAction.Text, is KeyAction.Reading -> 20.sp
@@ -253,6 +281,9 @@ private fun KeyButton(
         )
     }
 }
+
+/** 이 거리 이상 아래로 드래그하면 시프트 문자로 입력한다. */
+private val DRAG_SHIFT_THRESHOLD = 20.dp
 
 private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (action) {
     is KeyAction.Jamo -> (if (state.shift) action.shifted else action.normal).toString()
