@@ -1,0 +1,20 @@
+# Hanil Keyboard
+
+한글 두벌식 자판으로 일본어를 입력하는 Android IME. 상세 명세는 `docs/SPEC.md`, 한글→히라가나 규칙은 `docs/CONVERSION_RULES.md`, 사용자 프롬프트 원문은 `docs/PROMPTS.md`.
+
+## 문서 갱신 규칙 (필수)
+- 사용자의 새 프롬프트(요청)는 `docs/PROMPTS.md` 맨 아래에 원문 그대로 추가한다. 상시 지침이면 같은 파일의 "작업 규칙"에도 추가한다.
+- 새 요구사항이나 결정사항이 생기면 `docs/SPEC.md` 의 해당 절과 "결정 기록" 표를 갱신한다.
+- 한글→히라가나 매핑을 바꾸면 `docs/CONVERSION_RULES.md` 와 `HangulTest` 를 함께 수정한다.
+- 상태 머신 전이를 바꾸면 `docs/SPEC.md` §4 전이표와 `ImeEngineTest` 를 함께 수정한다.
+
+## 커밋 규칙 (필수)
+- 작업 후 사용자가 요청하지 않아도 **자동으로 커밋**한다.
+- 커밋은 하나의 작업으로 분리할 수 있는 **작은 단위**로 나눈다. (예: 서버 API 엔드포인트 하나 추가 정도)
+- 각 커밋은 가능한 한 단독으로 빌드가 깨지지 않도록 순서를 정한다. 커밋 메시지는 한국어로 작성한다.
+- 사용자 IDE 설정 파일(`.idea/` 등)은 사용자가 요청하지 않는 한 커밋하지 않는다.
+
+## 개발
+- 단위 테스트: `./gradlew :app:testDebugUnitTest` (로직 패키지 `hangul`, `conversion`, `engine` 은 순수 Kotlin 으로 유지)
+- 사전 재생성: `python tools/dictgen/build_dictionary.py` (Mozc 사전 다운로드 → `app/src/main/assets/dict/*.gz`)
+- 입력 문자열은 기기 내부에서만 처리한다. 네트워크 권한·외부 전송·입력 내용 저장을 추가하지 않는다.
