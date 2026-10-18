@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.algosketch.hanilkeyboard.conversion.Candidate
+import me.algosketch.hanilkeyboard.conversion.HanjaGloss
 
 /** 키보드 화면에 필요한 모든 상태. 서비스가 만들어 전달한다. */
 data class KeyboardUiState(
@@ -61,6 +64,8 @@ data class KeyboardUiState(
     val converting: Boolean,
     /** 엔터 키 라벨. null 이면 줄바꿈 아이콘을 표시한다. */
     val enterLabel: String?,
+    /** 포커스 후보의 한자 훈음. null 이면 한자 해설이 꺼져 있다(줄을 그리지 않음). */
+    val hanjaGloss: List<HanjaGloss>? = null,
 )
 
 private data class KeyboardColors(
@@ -106,7 +111,11 @@ fun KeyboardView(
             .padding(bottom = bottomInset)
     ) {
         // 후보가 있을 때만 후보 바를 표시한다 (없으면 숫자 줄이 맨 위)
-        if (state.candidates.isNotEmpty()) CandidateBar(state, colors, onCandidate)
+        if (state.candidates.isNotEmpty()) {
+            CandidateBar(state, colors, onCandidate)
+            // 후보를 고르는 동안 줄 높이가 바뀌지 않도록 한자가 없어도 줄을 유지한다
+            state.hanjaGloss?.let { HanjaGlossBar(it, colors) }
+        }
         val baseRows = when (state.mode) {
             KeyboardMode.LETTER -> KeyboardLayouts.letter(state.layout)
             KeyboardMode.SYMBOL -> KeyboardLayouts.symbolPages[state.symbolPage]
@@ -170,6 +179,38 @@ private fun CandidateBar(state: KeyboardUiState, colors: KeyboardColors, onCandi
                     fontWeight = if (focused) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** 포커스 후보의 한자별 한국어 뜻과 음: `学(學) 배울 학   行 다닐 행 · 시장 항` */
+@Composable
+private fun HanjaGlossBar(glosses: List<HanjaGloss>, colors: KeyboardColors) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(28.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        glosses.forEach { gloss ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = gloss.char + gloss.base?.let { "($it)" }.orEmpty(),
+                    color = colors.accent,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = gloss.readings.joinToString(" · "),
+                    color = colors.subText,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 4.dp),
+                    maxLines = 1,
                 )
             }
         }
