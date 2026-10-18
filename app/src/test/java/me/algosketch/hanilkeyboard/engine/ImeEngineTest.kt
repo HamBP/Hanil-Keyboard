@@ -72,6 +72,36 @@ class ImeEngineTest {
         assertEquals(ImeState.Idle, state)
     }
 
+    @Test fun arrowsMoveFocusBothWays() {
+        type("각코우")
+        send(ImeEvent.MoveFocus(1)) // 조합 중 → 는 스페이스와 같음
+        assertTrue(state is ImeState.Converting)
+        assertEquals(1, state.focusedIndex)
+        assertEquals("学校", state.displayText)
+        send(ImeEvent.MoveFocus(1))
+        assertEquals(2, state.focusedIndex)
+        send(ImeEvent.MoveFocus(-1))
+        assertEquals(1, state.focusedIndex)
+        send(ImeEvent.MoveFocus(-1))
+        send(ImeEvent.MoveFocus(-1)) // 처음 이전은 마지막으로 순환
+        assertEquals(state.candidates.lastIndex, state.focusedIndex)
+        send(ImeEvent.Enter)
+        assertEquals("ガッコウ", committed.toString())
+    }
+
+    @Test fun leftArrowWhileComposingFocusesLast() {
+        type("각코우")
+        send(ImeEvent.MoveFocus(-1))
+        assertTrue(state is ImeState.Converting)
+        assertEquals(state.candidates.lastIndex, state.focusedIndex)
+    }
+
+    @Test fun arrowsWhenIdleDoNothing() {
+        send(ImeEvent.MoveFocus(1))
+        assertEquals(ImeState.Idle, state)
+        assertTrue(effects.isEmpty())
+    }
+
     @Test fun backspaceInConvertingReturnsToComposing() {
         type("각코우")
         send(ImeEvent.Space)

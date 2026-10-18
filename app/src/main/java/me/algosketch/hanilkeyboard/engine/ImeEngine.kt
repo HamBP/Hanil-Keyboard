@@ -66,6 +66,10 @@ sealed interface ImeEvent {
     data object Backspace : ImeEvent
     data object Space : ImeEvent
     data object Enter : ImeEvent
+
+    /** 화살표 키: 포커스 후보를 [delta] 만큼 옮긴다 (양 끝에서 순환). */
+    data class MoveFocus(val delta: Int) : ImeEvent
+
     data class SelectCandidate(val index: Int) : ImeEvent
 
     /** 커서 이동 등 외부 요인으로 조합을 끝낼 때. 현재 포커스 후보 기준으로 확정한다. */
@@ -142,6 +146,7 @@ class ImeEngine(
         ImeEvent.Backspace -> Transition(ImeState.Idle, listOf(ImeEffect.DeleteBackward))
         ImeEvent.Space -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(" ")))
         ImeEvent.Enter -> Transition(ImeState.Idle, listOf(ImeEffect.EditorEnter))
+        is ImeEvent.MoveFocus -> Transition(ImeState.Idle)
         is ImeEvent.SelectCandidate, ImeEvent.Flush, ImeEvent.Reset -> Transition(ImeState.Idle)
     }
 
@@ -156,6 +161,10 @@ class ImeEngine(
                 if (comp.candidates.isEmpty()) Transition(state)
                 else Transition(ImeState.Converting(comp, if (comp.candidates.size > 1) 1 else 0))
             ImeEvent.Enter -> commitCandidate(comp, 0)
+            // 조합 중 포커스는 0번이므로 0번에서 옮긴다 (→ 는 스페이스와 같음)
+            is ImeEvent.MoveFocus ->
+                if (comp.candidates.isEmpty()) Transition(state)
+                else Transition(ImeState.Converting(comp, Math.floorMod(event.delta, comp.candidates.size)))
             is ImeEvent.SelectCandidate -> commitCandidate(comp, event.index)
             ImeEvent.Flush -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(comp.commitAllText(0))))
             ImeEvent.Reset -> Transition(ImeState.Idle)
@@ -173,6 +182,7 @@ class ImeEngine(
             ImeEvent.Backspace -> Transition(ImeState.Composing(comp))
             ImeEvent.Space -> Transition(ImeState.Converting(comp, (focus + 1) % comp.candidates.size))
             ImeEvent.Enter -> commitCandidate(comp, focus)
+            is ImeEvent.MoveFocus -> Transition(ImeState.Converting(comp, Math.floorMod(focus + event.delta, comp.candidates.size)))
             is ImeEvent.SelectCandidate -> commitCandidate(comp, event.index)
             ImeEvent.Flush -> Transition(ImeState.Idle, listOf(ImeEffect.Commit(comp.commitAllText(focus))))
             ImeEvent.Reset -> Transition(ImeState.Idle)

@@ -1,6 +1,8 @@
 package me.algosketch.hanilkeyboard.ime
 
 import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.text.InputType
 import android.view.KeyEvent
@@ -20,6 +22,8 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import me.algosketch.hanilkeyboard.conversion.HanjaGlossary
+import me.algosketch.hanilkeyboard.conversion.HanjaGlossaryRepository
 import me.algosketch.hanilkeyboard.conversion.IcuKatakanaConverter
 import me.algosketch.hanilkeyboard.conversion.KanaKanjiConverter
 import me.algosketch.hanilkeyboard.conversion.LanguageModelRepository
@@ -55,6 +59,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
     private var shift by mutableStateOf(false)
     private var enterAction by mutableIntStateOf(EditorInfo.IME_ACTION_UNSPECIFIED)
     private var bottomInsetPx by mutableIntStateOf(0)
+    private var hanjaGlossEnabled by mutableStateOf(false)
+    private var glossary by mutableStateOf<HanjaGlossary?>(null)
     private val multiTap = MultiTapTracker()
     private val kanaPad = KanaPadComposer()
 
@@ -92,6 +98,12 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
                         composing = state != ImeState.Idle,
                         converting = state is ImeState.Converting,
                         enterLabel = enterLabel(state),
+                        hanjaGloss = if (hanjaGlossEnabled) {
+                            state.candidates.getOrNull(state.focusedIndex)
+                                ?.let { glossary?.glossesOf(it.text) }.orEmpty()
+                        } else {
+                            null
+                        },
                     ),
                     bottomInsetPx = bottomInsetPx,
                     onKey = ::onKey,
@@ -117,6 +129,11 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
         imeState = ImeState.Idle
         kanaPad.reset()
         layout = KeyboardSettings.layout(this)
+        hanjaGlossEnabled = KeyboardSettings.hanjaGloss(this)
+        if (hanjaGlossEnabled && glossary == null) {
+            val main = Handler(Looper.getMainLooper())
+            HanjaGlossaryRepository.loadAsync(this) { loaded -> main.post { glossary = loaded } }
+        }
         shift = false
         symbolPage = 0
         updateBottomInset()
@@ -208,6 +225,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.Small -> onSmall()
             KeyAction.Backspace -> dispatch(ImeEvent.Backspace)
             KeyAction.Space -> dispatch(ImeEvent.Space)
+            KeyAction.FocusPrevious -> dispatch(ImeEvent.MoveFocus(-1))
+            KeyAction.FocusNext -> dispatch(ImeEvent.MoveFocus(1))
             KeyAction.Enter -> dispatch(ImeEvent.Enter)
             KeyAction.Shift -> shift = !shift
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
