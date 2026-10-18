@@ -107,10 +107,11 @@ fun KeyboardView(
     ) {
         // 후보가 있을 때만 후보 바를 표시한다 (없으면 숫자 줄이 맨 위)
         if (state.candidates.isNotEmpty()) CandidateBar(state, colors, onCandidate)
-        val rows = when (state.mode) {
+        val baseRows = when (state.mode) {
             KeyboardMode.LETTER -> KeyboardLayouts.letter(state.layout)
             KeyboardMode.SYMBOL -> KeyboardLayouts.symbolPages[state.symbolPage]
         }
+        val rows = if (state.candidates.isNotEmpty()) KeyboardLayouts.withFocusArrows(baseRows) else baseRows
         Column(Modifier.padding(horizontal = 3.dp, vertical = 4.dp)) {
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().height(52.dp)) {
@@ -255,8 +256,9 @@ private fun KeyButton(
                     pressed = true
                     heldKeys.flush() // 아직 떼지 않은 드래그 키를 먼저 입력
                     when {
-                        action == KeyAction.Backspace -> {
-                            // 길게 누르면 반복 삭제
+                        action == KeyAction.Backspace || action == KeyAction.FocusPrevious ||
+                            action == KeyAction.FocusNext -> {
+                            // 길게 누르면 반복 (삭제·후보 이동)
                             val job: Job = scope.launch {
                                 fire()
                                 delay(400)
@@ -336,6 +338,8 @@ private fun labelOf(action: KeyAction, state: KeyboardUiState): String = when (a
         state.composing -> "다음"
         else -> "띄어쓰기"
     }
+    KeyAction.FocusPrevious -> "◀"
+    KeyAction.FocusNext -> "▶"
     KeyAction.Enter -> state.enterLabel.orEmpty()
     KeyAction.Shift -> "⇧"
     KeyAction.SymbolMode -> "!#1"

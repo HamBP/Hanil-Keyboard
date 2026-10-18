@@ -35,6 +35,10 @@ sealed interface KeyAction {
 
     data object Backspace : KeyAction
     data object Space : KeyAction
+
+    /** 스페이스 양옆 화살표: 포커스 후보를 앞/뒤로 옮긴다. 후보가 있을 때만 자판에 나타난다. */
+    data object FocusPrevious : KeyAction
+    data object FocusNext : KeyAction
     data object Enter : KeyAction
     data object Shift : KeyAction
     data object SymbolMode : KeyAction
@@ -148,6 +152,19 @@ object KeyboardLayouts {
     /** 왼쪽 3키 + 오른쪽 3키. 두 묶음 사이는 간격을 두 배로 둔다. */
     private fun padRow(vararg actions: KeyAction) = actions.mapIndexed { i, action ->
         Key(action, wideGapEnd = i == 2, wideGapStart = i == 3)
+    }
+
+    /** 후보가 있을 때의 자판: 스페이스 폭의 1/5 씩을 떼어 양옆에 ◀ ▶ 키를 둔다. */
+    fun withFocusArrows(rows: List<List<Key>>): List<List<Key>> = rows.map { row ->
+        row.flatMap { key ->
+            if (key.action != KeyAction.Space) return@flatMap listOf(key)
+            val arrow = key.weight / 5
+            listOf(
+                Key(KeyAction.FocusPrevious, arrow),
+                key.copy(weight = key.weight - arrow * 2),
+                Key(KeyAction.FocusNext, arrow),
+            )
+        }
     }
 
     fun letter(type: KeyboardLayoutType): List<List<Key>> = when (type) {

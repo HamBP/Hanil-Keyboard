@@ -208,6 +208,8 @@ class HanilInputMethodService : InputMethodService(), LifecycleOwner, SavedState
             KeyAction.Small -> onSmall()
             KeyAction.Backspace -> dispatch(ImeEvent.Backspace)
             KeyAction.Space -> dispatch(ImeEvent.Space)
+            KeyAction.FocusPrevious -> dispatch(ImeEvent.MoveFocus(-1))
+            KeyAction.FocusNext -> dispatch(ImeEvent.MoveFocus(1))
             KeyAction.Enter -> dispatch(ImeEvent.Enter)
             KeyAction.Shift -> shift = !shift
             KeyAction.SymbolMode -> { mode = KeyboardMode.SYMBOL; symbolPage = 0 }
