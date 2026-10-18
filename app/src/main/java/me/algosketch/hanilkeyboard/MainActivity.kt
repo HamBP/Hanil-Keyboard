@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -26,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,11 +52,13 @@ class MainActivity : ComponentActivity() {
     private var enabled by mutableStateOf(false)
     private var selected by mutableStateOf(false)
     private var layout by mutableStateOf(KeyboardLayoutType.HANGUL_QWERTY)
+    private var hanjaGloss by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         layout = KeyboardSettings.layout(this)
+        hanjaGloss = KeyboardSettings.hanjaGloss(this)
         setContent {
             HanilKeyboardTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -68,7 +72,16 @@ class MainActivity : ComponentActivity() {
                             layout = it
                             KeyboardSettings.setLayout(this, it)
                         },
-                        licenses = { assets.open("licenses/mozc.txt").bufferedReader().use { it.readText() } },
+                        hanjaGloss = hanjaGloss,
+                        onHanjaGlossChange = {
+                            hanjaGloss = it
+                            KeyboardSettings.setHanjaGloss(this, it)
+                        },
+                        licenses = {
+                            LICENSE_FILES.joinToString("\n\n") { name ->
+                                assets.open("licenses/$name").bufferedReader().use { it.readText() }
+                            }
+                        },
                         modifier = Modifier.padding(innerPadding),
                     )
                 }
@@ -84,6 +97,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+    }
+
+    private companion object {
+        val LICENSE_FILES = listOf("mozc.txt", "hanja.txt")
     }
 
     private fun refreshStatus() {
@@ -105,6 +122,8 @@ private fun SetupScreen(
     onPickKeyboard: () -> Unit,
     layout: KeyboardLayoutType,
     onLayoutChange: (KeyboardLayoutType) -> Unit,
+    hanjaGloss: Boolean,
+    onHanjaGlossChange: (Boolean) -> Unit,
     licenses: () -> String,
     modifier: Modifier = Modifier,
 ) {
@@ -139,12 +158,30 @@ private fun SetupScreen(
             }
         }
 
-        Text("4. 입력해 보기", style = MaterialTheme.typography.titleMedium)
+        Text("4. 한자 해설", style = MaterialTheme.typography.titleMedium)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .toggleable(value = hanjaGloss, onValueChange = onHanjaGlossChange, role = Role.Switch),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("한자 뜻과 음 보기", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "후보를 고르는 동안 포커스된 후보의 한자마다 한국어 뜻과 음을 후보 바 아래에 보여줍니다. " +
+                        "일본 신자체는 한국에서 쓰는 정자로 찾습니다. 예) 学(學) 배울 학",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(checked = hanjaGloss, onCheckedChange = null)
+        }
+
+        Text("5. 입력해 보기", style = MaterialTheme.typography.titleMedium)
         Text(
             when (layout) {
                 KeyboardLayoutType.HANGUL_QWERTY -> "예) 각코우 → がっこう / 学校, 와타시하 → わたしは / 私は\n"
                 KeyboardLayoutType.KANA_PAD -> "예) か·う → く, さ(←) → ざ, か·や → きゃ, つ·小 → っ\n"
-            } + "스페이스: 다음 후보, 엔터: 확정, 후보 탭: 바로 확정",
+            } + "스페이스·▶: 다음 후보, ◀: 이전 후보, 엔터: 확정, 후보 탭: 바로 확정",
             style = MaterialTheme.typography.bodySmall,
         )
         OutlinedTextField(
